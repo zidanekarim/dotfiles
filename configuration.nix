@@ -1,4 +1,4 @@
-# Edit this configuration file to define what should be installed on
+# Edit this configuration file to define what should be installed
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
@@ -11,9 +11,18 @@
     ];
 
   # Bootloader.
-  boot.loader.grub.enable = true;
-  boot.loader.grub.device = "/dev/sda";
-  boot.loader.grub.useOSProber = true;
+  #boot.loader.grub.enable = true;
+  #boot.loader.grub.device = "/dev/sda";
+  #boot.loader.grub.useOSProber = true;
+ boot.blacklistedKernelModules = [ "nouveau" ];
+
+  boot.initrd.kernelModules = [ "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm" ];
+  boot.kernelParams = [ "nvidia-drm.modeset=1" ];
+boot.loader.grub.enable = true;
+boot.loader.grub.efiSupport = true;
+boot.loader.grub.device = "nodev"; # Tells GRUB it's a UEFI system
+boot.loader.grub.useOSProber = true;
+boot.loader.efi.canTouchEfiVariables = true;
 
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -51,8 +60,14 @@
   services.xserver.enable = true;
 
   # Enable the KDE Plasma Desktop Environment.
-  services.displayManager.sddm.enable = true;
-  services.desktopManager.plasma6.enable = true;
+ services.displayManager.sddm ={
+	 enable = true;
+#	 wayland.enable = true;
+};
+
+
+
+ services.desktopManager.plasma6.enable = true;
 
   # Configure keymap in X11
   services.xserver.xkb = {
@@ -105,13 +120,28 @@
   environment.systemPackages = with pkgs; [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
+	pkgs.papirus-icon-theme
+  pkgs.adwaita-icon-theme # Standard GNOME icons
+  pkgs.hicolor-icon-theme # The "base" theme everything needs
 	git
+	linux-wallpaperengine
+	pavucontrol
 	neovim
 	htop
 	fastfetch
 	quickshell
 	kitty
+	wofi
+	kitty.terminfo
 	inputs.caelestia-shell.packages.${pkgs.system}.with-cli	
+	wl-clipboard
+	cliphist
+	hyprland
+	hyprlock
+	swappy
+	grim
+	slurp
+	pkgs.waybar
  ];
 
 services.openssh = {
@@ -158,4 +188,39 @@ networking.firewall.allowedTCPPorts = [22];
  "nix-command"
  "flakes"
 ] ; 
+
+hardware.graphics.enable = true;
+services.xserver.videoDrivers = ["nvidia"];
+hardware.nvidia = {
+	modesetting.enable = true;
+	powerManagement.enable = false;
+	open = true;
+	nvidiaSettings = true;
+	package = config.boot.kernelPackages.nvidiaPackages.stable;
+};
+services.flatpak.enable = true;
+
+
+
+
+  xdg.portal.config.common.default = "gtk";
+ xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-hyprland pkgs.xdg-desktop-portal-gtk ];
+  };
+environment.sessionVariables = {
+  MOZ_ENABLE_WAYLAND = "1";
+GBM_BACKEND = "nvidia-drm";
+  __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+LIBVA_DRIVER_NAME = "nvidia";
+    XDG_SESSION_TYPE = "wayland";
+WLR_NO_HARDWARE_CURSORS = "1";
+NGF_FORCE_INTEL_GHOST_DISPLAY = "0"; 
+};
+
+
+environment.extraInit = ''
+    export XDG_DATA_DIRS="$HOME/.local/share/applications:$HOME/.local/share/Steam/external_apps:$XDG_DATA_DIRS"
+  '';
+
 }
